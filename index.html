@@ -24,24 +24,35 @@
     <iframe id="formFrame" class="hidden" src=""></iframe>
 
     <script>
-        // 1. Initialize the SDK
-        ZOHO.embeddedApp.init().then(function(){
+        console.log("!!! WIDGET LOADED !!!");
 
-            // 2. Setup the "Listener" for the Thank You page signal
+        ZOHO.embeddedApp.init().then(function(){
+            console.log("!!! ZOHO SDK INITIALIZED !!!");
+
+            // --- THE LISTENER ---
             window.addEventListener("message", function(event){
-                // If we receive the secret password "FORM_SUBMITTED"
+                // Debug log to see EVERY message passing through
+                console.log("Received Message from:", event.origin, "Data:", event.data);
+
                 if(event.data === "FORM_SUBMITTED"){
+                    console.log("!!! VALID SIGNAL RECEIVED - ADVANCING BLUEPRINT !!!");
                     
-                    // 3. EXECUTE THE BLUEPRINT TRANSITION
-                    // This is the magic command that "Clicks Save" automatically
-                    ZOHO.CRM.BLUEPRINT.proceed().then(function(data){
-                        // Optional: Log success or close modal logic if needed
-                        console.log("Blueprint Advanced Successfully");
+                    // Trigger the Transition
+                    ZOHO.CRM.BLUEPRINT.proceed()
+                    .then(function(data){
+                        console.log("Blueprint Success:", data);
+                    })
+                    .catch(function(err){
+                        console.error("Blueprint Failed:", err);
+                        // If it fails, show error on screen
+                        document.getElementById("formFrame").style.display = "none";
+                        document.getElementById("errorMsg").innerHTML = "Error Advancing Blueprint: " + JSON.stringify(err);
+                        document.getElementById("errorMsg").classList.remove("hidden");
                     });
                 }
             });
 
-            // 3. Load the Record and Form URL (Standard Logic)
+            // --- LOAD DATA ---
             ZOHO.embeddedApp.on("PageLoad", function(data){
                 
                 var recordId = data.EntityId;
@@ -59,7 +70,6 @@
                         const getLookupId = (field) => (deal[field] && deal[field].id) ? deal[field].id : "";
                         const getLookupName = (field) => (deal[field] && deal[field].name) ? encodeURIComponent(deal[field].name) : "";
 
-                        // --- URL CONSTRUCTION ---
                         let baseUrl = "https://zfrmz.com/dnGvP3BdtkGelCcfEGMb";
                         let params = [];
 
@@ -76,6 +86,7 @@
                         let frame = document.getElementById("formFrame");
                         frame.src = fullUrl;
                         frame.classList.remove("hidden");
+                        console.log("Iframe Source Set");
 
                     } else {
                         showError("Could not retrieve record data.");
