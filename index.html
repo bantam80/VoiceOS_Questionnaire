@@ -24,70 +24,65 @@
     <iframe id="formFrame" class="hidden" src=""></iframe>
 
     <script>
-        ZOHO.embeddedApp.on("PageLoad", function(data){
-            
-            var recordId = data.EntityId;
-            var module = data.Entity;
+        // 1. Initialize the SDK
+        ZOHO.embeddedApp.init().then(function(){
 
-            ZOHO.CRM.API.getRecord({Entity: module, RecordID: recordId})
-            .then(function(response){
-                
-                document.getElementById("loading").classList.add("hidden");
-
-                if(response.data && response.data.length > 0){
-                    let deal = response.data[0];
-
-                    // Helper functions
-                    const getVal = (val) => val ? encodeURIComponent(val) : "";
-                    const getLookupId = (field) => (deal[field] && deal[field].id) ? deal[field].id : "";
-                    const getLookupName = (field) => (deal[field] && deal[field].name) ? encodeURIComponent(deal[field].name) : "";
-
-                    // --- URL CONSTRUCTION ---
-                    let baseUrl = "https://zfrmz.com/dnGvP3BdtkGelCcfEGMb";
-                    let params = [];
-
-                    // 1. OpportunityID = opp_id
-                    // (We use the Key field we created to ensure uniqueness)
-                    params.push("opp_id=" + getVal(deal.Form_Update_Key));
-
-                    // 2. Account Name = acct_name
-                    params.push("acct_name=" + getLookupName("Account_Name"));
-
-                    // 3. End Customer ID = end_cust_id
-                    // ** UPDATED to match your alias **
-                    params.push("end_cust_id=" + getLookupId("End_Customer"));
-
-                    // 4. Opportunity Name = opp_name
-                    params.push("opp_name=" + getVal(deal.Deal_Name));
-
-                    // 5. Next Step = next_step
-                    params.push("next_step=" + getVal(deal.Next_Step));
-
-                    // 6. Pipeline = pipe
-                    params.push("pipe=" + getVal(deal.Pipeline));
-
-                    // 7. Stage = stage
-                    params.push("stage=" + getVal(deal.Stage));
-
-                    // --- LOAD IFRAME ---
-                    let fullUrl = baseUrl + "?" + params.join("&");
+            // 2. Setup the "Listener" for the Thank You page signal
+            window.addEventListener("message", function(event){
+                // If we receive the secret password "FORM_SUBMITTED"
+                if(event.data === "FORM_SUBMITTED"){
                     
-                    // console.log("Final URL:", fullUrl); // Uncomment to debug if needed
-
-                    let frame = document.getElementById("formFrame");
-                    frame.src = fullUrl;
-                    frame.classList.remove("hidden");
-
-                } else {
-                    showError("Could not retrieve record data.");
+                    // 3. EXECUTE THE BLUEPRINT TRANSITION
+                    // This is the magic command that "Clicks Save" automatically
+                    ZOHO.CRM.BLUEPRINT.proceed().then(function(data){
+                        // Optional: Log success or close modal logic if needed
+                        console.log("Blueprint Advanced Successfully");
+                    });
                 }
-            })
-            .catch(function(err){
-                showError("API Error: " + JSON.stringify(err));
+            });
+
+            // 3. Load the Record and Form URL (Standard Logic)
+            ZOHO.embeddedApp.on("PageLoad", function(data){
+                
+                var recordId = data.EntityId;
+                var module = data.Entity;
+
+                ZOHO.CRM.API.getRecord({Entity: module, RecordID: recordId})
+                .then(function(response){
+                    
+                    document.getElementById("loading").classList.add("hidden");
+
+                    if(response.data && response.data.length > 0){
+                        let deal = response.data[0];
+
+                        const getVal = (val) => val ? encodeURIComponent(val) : "";
+                        const getLookupId = (field) => (deal[field] && deal[field].id) ? deal[field].id : "";
+                        const getLookupName = (field) => (deal[field] && deal[field].name) ? encodeURIComponent(deal[field].name) : "";
+
+                        // --- URL CONSTRUCTION ---
+                        let baseUrl = "https://zfrmz.com/dnGvP3BdtkGelCcfEGMb";
+                        let params = [];
+
+                        params.push("opp_id=" + getVal(deal.Form_Update_Key));
+                        params.push("acct_name=" + getLookupName("Account_Name"));
+                        params.push("end_cust_id=" + getLookupId("End_Customer"));
+                        params.push("opp_name=" + getVal(deal.Deal_Name));
+                        params.push("next_step=" + getVal(deal.Next_Step));
+                        params.push("pipe=" + getVal(deal.Pipeline));
+                        params.push("stage=" + getVal(deal.Stage));
+
+                        let fullUrl = baseUrl + "?" + params.join("&");
+                        
+                        let frame = document.getElementById("formFrame");
+                        frame.src = fullUrl;
+                        frame.classList.remove("hidden");
+
+                    } else {
+                        showError("Could not retrieve record data.");
+                    }
+                });
             });
         });
-
-        ZOHO.embeddedApp.init();
 
         function showError(msg) {
             document.getElementById("loading").classList.add("hidden");
