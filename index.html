@@ -6,14 +6,12 @@
     <script src="https://live.zwidgets.com/js-sdk/1.1/ZohoEmbededAppSDK.min.js"></script>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; overflow: hidden;}
-        
         .loader { 
             border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
             width: 30px; height: 30px; animation: spin 2s linear infinite;
             margin: 50px auto;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
         iframe { width: 100%; height: 100vh; border: none; }
         .error { color: #cc0000; padding: 20px; text-align: center; }
         .hidden { display: none; }
@@ -26,35 +24,60 @@
     <iframe id="formFrame" class="hidden" src=""></iframe>
 
     <script>
-        // 1. Listen for the PageLoad event to get context (Record ID)
         ZOHO.embeddedApp.on("PageLoad", function(data){
             
-            // data.EntityId holds the Deal ID
-            // data.Entity holds the Module Name (e.g. Deals)
             var recordId = data.EntityId;
             var module = data.Entity;
 
-            // 2. Fetch the Record Data to find the URL
             ZOHO.CRM.API.getRecord({Entity: module, RecordID: recordId})
             .then(function(response){
                 
-                // Hide Loader
                 document.getElementById("loading").classList.add("hidden");
 
-                // 3. Extract the Link
-                // Check if response.data exists and has items
                 if(response.data && response.data.length > 0){
+                    let deal = response.data[0];
+
+                    // Helper functions
+                    const getVal = (val) => val ? encodeURIComponent(val) : "";
+                    const getLookupId = (field) => (deal[field] && deal[field].id) ? deal[field].id : "";
+                    const getLookupName = (field) => (deal[field] && deal[field].name) ? encodeURIComponent(deal[field].name) : "";
+
+                    // --- URL CONSTRUCTION ---
+                    let baseUrl = "https://zfrmz.com/dnGvP3BdtkGelCcfEGMb";
+                    let params = [];
+
+                    // 1. OpportunityID = opp_id
+                    // (We use the Key field we created to ensure uniqueness)
+                    params.push("opp_id=" + getVal(deal.Form_Update_Key));
+
+                    // 2. Account Name = acct_name
+                    params.push("acct_name=" + getLookupName("Account_Name"));
+
+                    // 3. End Customer ID = end_cust_id
+                    // ** UPDATED to match your alias **
+                    params.push("end_cust_id=" + getLookupId("End_Customer"));
+
+                    // 4. Opportunity Name = opp_name
+                    params.push("opp_name=" + getVal(deal.Deal_Name));
+
+                    // 5. Next Step = next_step
+                    params.push("next_step=" + getVal(deal.Next_Step));
+
+                    // 6. Pipeline = pipe
+                    params.push("pipe=" + getVal(deal.Pipeline));
+
+                    // 7. Stage = stage
+                    params.push("stage=" + getVal(deal.Stage));
+
+                    // --- LOAD IFRAME ---
+                    let fullUrl = baseUrl + "?" + params.join("&");
                     
-                    // Verify API Name: 'Questionnaire_Link'
-                    let urlData = response.data[0].Questionnaire_Link;
-                    
-                    if(urlData && urlData.startsWith("http")){
-                        let frame = document.getElementById("formFrame");
-                        frame.src = urlData;
-                        frame.classList.remove("hidden");
-                    } else {
-                        showError("The Questionnaire Link field is empty.<br>Please ensure the record is saved so the link is generated.");
-                    }
+                    // console.log("Final URL:", fullUrl); // Uncomment to debug if needed
+
+                    let frame = document.getElementById("formFrame");
+                    frame.src = fullUrl;
+                    frame.classList.remove("hidden");
+
                 } else {
                     showError("Could not retrieve record data.");
                 }
@@ -64,7 +87,6 @@
             });
         });
 
-        // 4. Initialize the connection
         ZOHO.embeddedApp.init();
 
         function showError(msg) {
