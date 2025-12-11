@@ -1,15 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; color: #444; }
+    </style>
     <script>
-        // When this page loads (after form submit), tell the parent widget to finish.
         window.onload = function() {
-            // Send a message to the parent window (the Widget)
+            console.log("!!! THANK YOU PAGE LOADED !!!");
+            
+            // 1. Visual confirmation for you
+            document.getElementById("status").innerHTML = "Signal Sent. Closing...";
+
+            // 2. Send Message to Parent (The Widget)
+            // We use "*" to bypass the origin check error you saw in the console
             window.parent.postMessage("FORM_SUBMITTED", "*");
+            
+            console.log("!!! SIGNAL SENT TO PARENT !!!");
         };
     </script>
 </head>
 <body>
-    <h3>Processing...</h3>
+    <h2 id="status">Processing...</h2>
 </body>
 </html>
