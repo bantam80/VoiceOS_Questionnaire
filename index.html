@@ -24,75 +24,83 @@
     <iframe id="formFrame" class="hidden" src=""></iframe>
 
     <script>
-        console.log("!!! WIDGET LOADED !!!");
+        console.log("!!! SCRIPT STARTING !!!");
 
-        ZOHO.embeddedApp.init().then(function(){
-            console.log("!!! ZOHO SDK INITIALIZED !!!");
+        // --- 1. SETUP EVENT LISTENERS (Define these BEFORE init) ---
 
-            // --- THE LISTENER ---
-            window.addEventListener("message", function(event){
-                // Debug log to see EVERY message passing through
-                console.log("Received Message from:", event.origin, "Data:", event.data);
+        // Listener for the PageLoad event (Data from CRM)
+        ZOHO.embeddedApp.on("PageLoad", function(data){
+            console.log("!!! PAGE LOAD RECEIVED !!!", data);
+            
+            var recordId = data.EntityId;
+            var module = data.Entity; // Should be "Deals"
 
-                if(event.data === "FORM_SUBMITTED"){
-                    console.log("!!! VALID SIGNAL RECEIVED - ADVANCING BLUEPRINT !!!");
-                    
-                    // Trigger the Transition
-                    ZOHO.CRM.BLUEPRINT.proceed()
-                    .then(function(data){
-                        console.log("Blueprint Success:", data);
-                    })
-                    .catch(function(err){
-                        console.error("Blueprint Failed:", err);
-                        // If it fails, show error on screen
-                        document.getElementById("formFrame").style.display = "none";
-                        document.getElementById("errorMsg").innerHTML = "Error Advancing Blueprint: " + JSON.stringify(err);
-                        document.getElementById("errorMsg").classList.remove("hidden");
-                    });
-                }
-            });
-
-            // --- LOAD DATA ---
-            ZOHO.embeddedApp.on("PageLoad", function(data){
+            // Fetch Record Data
+            ZOHO.CRM.API.getRecord({Entity: module, RecordID: recordId})
+            .then(function(response){
+                console.log("Record Fetched:", response);
                 
-                var recordId = data.EntityId;
-                var module = data.Entity;
+                // HIDE THE SPINNER NOW
+                document.getElementById("loading").classList.add("hidden");
 
-                ZOHO.CRM.API.getRecord({Entity: module, RecordID: recordId})
-                .then(function(response){
+                if(response.data && response.data.length > 0){
+                    let deal = response.data[0];
+
+                    // Helper Functions
+                    const getVal = (val) => val ? encodeURIComponent(val) : "";
+                    const getLookupId = (field) => (deal[field] && deal[field].id) ? deal[field].id : "";
+                    const getLookupName = (field) => (deal[field] && deal[field].name) ? encodeURIComponent(deal[field].name) : "";
+
+                    // Construct URL
+                    let baseUrl = "https://zfrmz.com/dnGvP3BdtkGelCcfEGMb";
+                    let params = [];
+
+                    params.push("opp_id=" + getVal(deal.Form_Update_Key));
+                    params.push("acct_name=" + getLookupName("Account_Name"));
+                    params.push("end_cust_id=" + getLookupId("End_Customer"));
+                    params.push("opp_name=" + getVal(deal.Deal_Name));
+                    params.push("next_step=" + getVal(deal.Next_Step));
+                    params.push("pipe=" + getVal(deal.Pipeline));
+                    params.push("stage=" + getVal(deal.Stage));
+
+                    let fullUrl = baseUrl + "?" + params.join("&");
+                    console.log("Loading URL:", fullUrl);
                     
-                    document.getElementById("loading").classList.add("hidden");
+                    let frame = document.getElementById("formFrame");
+                    frame.src = fullUrl;
+                    frame.classList.remove("hidden");
 
-                    if(response.data && response.data.length > 0){
-                        let deal = response.data[0];
-
-                        const getVal = (val) => val ? encodeURIComponent(val) : "";
-                        const getLookupId = (field) => (deal[field] && deal[field].id) ? deal[field].id : "";
-                        const getLookupName = (field) => (deal[field] && deal[field].name) ? encodeURIComponent(deal[field].name) : "";
-
-                        let baseUrl = "https://zfrmz.com/dnGvP3BdtkGelCcfEGMb";
-                        let params = [];
-
-                        params.push("opp_id=" + getVal(deal.Form_Update_Key));
-                        params.push("acct_name=" + getLookupName("Account_Name"));
-                        params.push("end_cust_id=" + getLookupId("End_Customer"));
-                        params.push("opp_name=" + getVal(deal.Deal_Name));
-                        params.push("next_step=" + getVal(deal.Next_Step));
-                        params.push("pipe=" + getVal(deal.Pipeline));
-                        params.push("stage=" + getVal(deal.Stage));
-
-                        let fullUrl = baseUrl + "?" + params.join("&");
-                        
-                        let frame = document.getElementById("formFrame");
-                        frame.src = fullUrl;
-                        frame.classList.remove("hidden");
-                        console.log("Iframe Source Set");
-
-                    } else {
-                        showError("Could not retrieve record data.");
-                    }
-                });
+                } else {
+                    showError("Could not retrieve record data.");
+                }
+            })
+            .catch(function(err){
+                console.error("API Error:", err);
+                showError("API Error: " + JSON.stringify(err));
             });
+        });
+
+        // Listener for the Thank You Page Signal (Auto-Advance)
+        window.addEventListener("message", function(event){
+            // Filter out Zoho's internal messages
+            if(event.data === "FORM_SUBMITTED"){
+                console.log("!!! FORM SUBMIT SIGNAL RECEIVED !!!");
+                
+                ZOHO.CRM.BLUEPRINT.proceed()
+                .then(function(data){
+                    console.log("Blueprint Advanced:", data);
+                })
+                .catch(function(err){
+                    console.error("Blueprint Failed:", err);
+                });
+            }
+        });
+
+        // --- 2. INITIALIZE SDK (Last Step) ---
+        ZOHO.embeddedApp.init().then(function(){
+            console.log("!!! SDK INITIALIZED !!!");
+            // Resize (Optional but good for popups)
+            ZOHO.CRM.UI.Resize({height:"600", width:"800"});
         });
 
         function showError(msg) {
