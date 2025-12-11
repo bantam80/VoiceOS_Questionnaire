@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        // When this page loads (after form submit), tell the parent widget to finish.
+        window.onload = function() {
+            // Send a message to the parent window (the Widget)
+            window.parent.postMessage("FORM_SUBMITTED", "*");
+        };
+    </script>
+</head>
+<body>
+    <h3>Processing...</h3>
+</body>
+</html>
