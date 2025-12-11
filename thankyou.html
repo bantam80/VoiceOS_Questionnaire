@@ -1,25 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; color: #444; }
-    </style>
     <script>
         window.onload = function() {
-            console.log("!!! THANK YOU PAGE LOADED !!!");
-            
-            // 1. Visual confirmation for you
-            document.getElementById("status").innerHTML = "Signal Sent. Closing...";
-
-            // 2. Send Message to Parent (The Widget)
-            // We use "*" to bypass the origin check error you saw in the console
+            // Send Message to Parent Widget
             window.parent.postMessage("FORM_SUBMITTED", "*");
-            
-            console.log("!!! SIGNAL SENT TO PARENT !!!");
         };
     </script>
+    <style>
+        body { font-family: sans-serif; text-align: center; color: #666; margin-top: 50px;}
+    </style>
 </head>
 <body>
-    <h2 id="status">Processing...</h2>
+    <h3>Submission Received. Proceeding...</h3>
 </body>
 </html>
