@@ -6,8 +6,7 @@
     <script src="https://live.zwidgets.com/js-sdk/1.1/ZohoEmbededAppSDK.min.js"></script>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; overflow: hidden;}
-
-        /* The Loader */
+        
         .loader { 
             border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%;
             width: 30px; height: 30px; animation: spin 2s linear infinite;
@@ -27,36 +26,53 @@
     <iframe id="formFrame" class="hidden" src=""></iframe>
 
     <script>
-        ZOHO.embeddedApp.init().then(function(){
+        // 1. Listen for the PageLoad event to get context (Record ID)
+        ZOHO.embeddedApp.on("PageLoad", function(data){
+            
+            // data.EntityId holds the Deal ID
+            // data.Entity holds the Module Name (e.g. Deals)
+            var recordId = data.EntityId;
+            var module = data.Entity;
 
-            // Get the BluePrint Context
-            ZOHO.CRM.BLUEPRINT.proceed().then(function(response){
+            // 2. Fetch the Record Data to find the URL
+            ZOHO.CRM.API.getRecord({Entity: module, RecordID: recordId})
+            .then(function(response){
+                
+                // Hide Loader
+                document.getElementById("loading").classList.add("hidden");
 
-                let recordId = response.blueprint.recordId;
-
-                // Fetch the actual record data to get the URL
-                ZOHO.CRM.API.getRecord({Entity:"Deals", RecordID:recordId})
-                .then(function(data){
-
-                    // Hide Loader
-                    document.getElementById("loading").classList.add("hidden");
-
-                    // Grab the Link
-                    // CHECK THIS: Ensure 'Questionnaire_Link' matches your API Name exactly
-                    let urlData = data.data[0].Questionnaire_Link;
-
+                // 3. Extract the Link
+                // Check if response.data exists and has items
+                if(response.data && response.data.length > 0){
+                    
+                    // Verify API Name: 'Questionnaire_Link'
+                    let urlData = response.data[0].Questionnaire_Link;
+                    
                     if(urlData && urlData.startsWith("http")){
                         let frame = document.getElementById("formFrame");
                         frame.src = urlData;
                         frame.classList.remove("hidden");
                     } else {
-                        let err = document.getElementById("errorMsg");
-                        err.innerHTML = "<b>Error:</b> The Questionnaire Link is empty.<br>Please ensure the record is saved and the link generated.";
-                        err.classList.remove("hidden");
+                        showError("The Questionnaire Link field is empty.<br>Please ensure the record is saved so the link is generated.");
                     }
-                });
+                } else {
+                    showError("Could not retrieve record data.");
+                }
+            })
+            .catch(function(err){
+                showError("API Error: " + JSON.stringify(err));
             });
         });
+
+        // 4. Initialize the connection
+        ZOHO.embeddedApp.init();
+
+        function showError(msg) {
+            document.getElementById("loading").classList.add("hidden");
+            var errDiv = document.getElementById("errorMsg");
+            errDiv.innerHTML = "<b>Error:</b> " + msg;
+            errDiv.classList.remove("hidden");
+        }
     </script>
 </body>
 </html>
