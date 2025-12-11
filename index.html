@@ -24,34 +24,26 @@
     <iframe id="formFrame" class="hidden" src=""></iframe>
 
     <script>
-        console.log("!!! SCRIPT STARTING !!!");
+        /* --- 1. SETUP EVENT LISTENERS --- */
 
-        // --- 1. SETUP EVENT LISTENERS (Define these BEFORE init) ---
-
-        // Listener for the PageLoad event (Data from CRM)
+        // Listener for PageLoad (Data from CRM)
         ZOHO.embeddedApp.on("PageLoad", function(data){
-            console.log("!!! PAGE LOAD RECEIVED !!!", data);
             
             var recordId = data.EntityId;
-            var module = data.Entity; // Should be "Deals"
+            var module = data.Entity;
 
-            // Fetch Record Data
             ZOHO.CRM.API.getRecord({Entity: module, RecordID: recordId})
             .then(function(response){
-                console.log("Record Fetched:", response);
                 
-                // HIDE THE SPINNER NOW
                 document.getElementById("loading").classList.add("hidden");
 
                 if(response.data && response.data.length > 0){
                     let deal = response.data[0];
 
-                    // Helper Functions
                     const getVal = (val) => val ? encodeURIComponent(val) : "";
                     const getLookupId = (field) => (deal[field] && deal[field].id) ? deal[field].id : "";
                     const getLookupName = (field) => (deal[field] && deal[field].name) ? encodeURIComponent(deal[field].name) : "";
 
-                    // Construct URL
                     let baseUrl = "https://zfrmz.com/dnGvP3BdtkGelCcfEGMb";
                     let params = [];
 
@@ -64,7 +56,6 @@
                     params.push("stage=" + getVal(deal.Stage));
 
                     let fullUrl = baseUrl + "?" + params.join("&");
-                    console.log("Loading URL:", fullUrl);
                     
                     let frame = document.getElementById("formFrame");
                     frame.src = fullUrl;
@@ -75,33 +66,19 @@
                 }
             })
             .catch(function(err){
-                console.error("API Error:", err);
                 showError("API Error: " + JSON.stringify(err));
             });
         });
 
-        // Listener for the Thank You Page Signal (Auto-Advance)
+        // Listener for Thank You Page (Auto-Advance)
         window.addEventListener("message", function(event){
-            // Filter out Zoho's internal messages
             if(event.data === "FORM_SUBMITTED"){
-                console.log("!!! FORM SUBMIT SIGNAL RECEIVED !!!");
-                
-                ZOHO.CRM.BLUEPRINT.proceed()
-                .then(function(data){
-                    console.log("Blueprint Advanced:", data);
-                })
-                .catch(function(err){
-                    console.error("Blueprint Failed:", err);
-                });
+                ZOHO.CRM.BLUEPRINT.proceed();
             }
         });
 
-        // --- 2. INITIALIZE SDK (Last Step) ---
-        ZOHO.embeddedApp.init().then(function(){
-            console.log("!!! SDK INITIALIZED !!!");
-            // Resize (Optional but good for popups)
-            ZOHO.CRM.UI.Resize({height:"600", width:"800"});
-        });
+        /* --- 2. INITIALIZE SDK --- */
+        ZOHO.embeddedApp.init();
 
         function showError(msg) {
             document.getElementById("loading").classList.add("hidden");
